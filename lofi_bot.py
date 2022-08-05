@@ -1,6 +1,6 @@
 import discord
 import pytube as pt
-import os
+import os 
 import string
 import random
 import threading
@@ -39,10 +39,9 @@ def play_song(cur, vc):
     vc.play(discord.FFmpegPCMAudio(source=cur))
     while vc.is_playing():
         pass
-    stop_song(vc, cur)
 
-def stop_song(vc, cur):
     vc.stop()
+    
     
     os.remove(cur)
     print('deleted')
@@ -60,7 +59,8 @@ def loop_songs(start, vc, current):
         cur = get_songs(count) 
         t1.join()
         count += 1
-    stop_song(vc, current)
+    
+    
         
 
 class MyClient(discord.Client):
@@ -69,6 +69,7 @@ class MyClient(discord.Client):
         self.counter = 0
         self.current = ""
         self.t = ""
+        self.vc_hold = ""
         
     async def on_ready(self):
         print('Logged on as {0}!'.format(self.user))
@@ -86,13 +87,14 @@ class MyClient(discord.Client):
             await message.channel.send('Hello World!')
         if message.content.startswith('#play'):
             await message.channel.send('Playing')
-            vc = await message.author.voice.channel.connect()
+            self.vc_hold = await message.author.voice.channel.connect()
+            
             #check if count is less than len(urls)
             if self.counter > len(urls):
                 self.counter = 0
             
             #creat new thread to download song
-            self.t = threading.Thread(target=loop_songs, args=(self.counter, vc, self.current, ))
+            self.t = threading.Thread(target=loop_songs, args=(self.counter, self.vc_hold, self.current, ))
             self.t.start()
         if message.content.startswith('#add'):
             f = open(path + 'urls.txt', 'a')
@@ -117,6 +119,9 @@ class MyClient(discord.Client):
                 self.t.do_run = False
                 self.t.join()
                 self.t = ""
+            await self.vc_hold.disconnect()
+            await message.channel.send('Stopped')
+            self.vc_hold = ""
         if message.content.startswith('#list'):
             await message.channel.send(urls)
         
